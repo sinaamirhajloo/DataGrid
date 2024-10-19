@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 const DataGrid = () => {
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
-  const [filterText, setFilterText] = useState('');
+  const [filters, setFilters] = useState({});
+  const [filterTypes, setFilterTypes] = useState({});
   const [error, setError] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
 
@@ -24,16 +25,51 @@ const DataGrid = () => {
       });
   }, []);
 
-  const handleFilterChange = (event) => {
-    const text = event.target.value.toLowerCase();
-    setFilterText(text);
-    const filtered = data.filter(item => 
-      Object.values(item).some(value => 
-        value && value.toString().toLowerCase().includes(text)
-      )
-    );
+  const handleFilterChange = (key, value) => {
+    setFilters(prevFilters => ({
+      ...prevFilters,
+      [key]: value
+    }));
+  };
+
+  const handleFilterTypeChange = (key, type) => {
+    setFilterTypes(prevTypes => ({
+      ...prevTypes,
+      [key]: type
+    }));
+  };
+
+  const applyFilters = () => {
+    let filtered = [...data];
+    for (let key in filters) {
+      const filterValue = filters[key]?.toLowerCase();
+      const filterType = filterTypes[key] || 'contains';
+      filtered = filtered.filter(item => {
+        const itemValue = item[key]?.toString().toLowerCase() || '';
+        switch (filterType) {
+          case 'start with':
+            return itemValue.startsWith(filterValue);
+          case 'end with':
+            return itemValue.endsWith(filterValue);
+          case 'contains':
+            return itemValue.includes(filterValue);
+          case 'does not contain':
+            return !itemValue.includes(filterValue);
+          case 'equals':
+            return itemValue === filterValue;
+          case 'does not equal':
+            return itemValue !== filterValue;
+          default:
+            return true;
+        }
+      });
+    }
     setFilteredData(filtered);
   };
+
+  useEffect(() => {
+    applyFilters();
+  }, [filters, filterTypes]);
 
   const sortData = (key) => {
     let direction = 'ascending';
@@ -58,34 +94,45 @@ const DataGrid = () => {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <input
-        type="text"
-        placeholder="Filter..."
-        value={filterText}
-        onChange={handleFilterChange}
-        className="mb-4 p-2 border border-gray-300"
-      />
-      <table className="min-w-full bg-white border border-gray-200">
-        <thead>
+    <div className="overflow-x-auto p-4">
+      <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-lg">
+        <thead className="bg-gray-100">
           <tr>
             {filteredData.length > 0 && Object.keys(filteredData[0]).map((key) => (
               <th
                 key={key}
                 onClick={() => sortData(key)}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b cursor-pointer"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b cursor-pointer"
               >
-                {key}
-                {sortConfig.key === key && (
-                  <span>{sortConfig.direction === 'ascending' ? ' 🔼' : ' 🔽'}</span>
-                )}
+                <div className="flex flex-col space-y-2">
+                  <span>{key}</span>
+                  <select
+                    value={filterTypes[key] || 'contains'}
+                    onChange={(e) => handleFilterTypeChange(key, e.target.value)}
+                    className="border border-gray-300 rounded-md p-1 text-xs"
+                  >
+                    <option value="contains">Contains</option>
+                    <option value="start with">Start With</option>
+                    <option value="end with">End With</option>
+                    <option value="does not contain">Does Not Contain</option>
+                    <option value="equals">Equals</option>
+                    <option value="does not equal">Does Not Equal</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder={`Filter ${key}...`}
+                    value={filters[key] || ''}
+                    onChange={(e) => handleFilterChange(key, e.target.value)}
+                    className="border border-gray-300 rounded-md p-1 text-xs"
+                  />
+                </div>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {filteredData.map((row, index) => (
-            <tr key={index} className="border-b">
+            <tr key={index} className="border-b hover:bg-gray-50">
               {Object.values(row).map((value, i) => (
                 <td key={i} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {value === null || value === undefined 
