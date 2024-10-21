@@ -1,96 +1,118 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react"
 
 const DataGrid = () => {
-  const [data, setData] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
-  const [filters, setFilters] = useState({});
-  const [filterTypes, setFilterTypes] = useState({});
-  const [error, setError] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+  const [data, setData] = useState([])
+  const [filteredData, setFilteredData] = useState([])
+  const [filters, setFilters] = useState({})
+  const [filterTypes, setFilterTypes] = useState({})
+  const [error, setError] = useState(null)
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' })
 
+  
+  const [currentPage, setCurrentPage] = useState(1)
+  const rowsPerPage = 5
   useEffect(() => {
     fetch("https://jsonplaceholder.typicode.com/users")
       .then(response => {
         if (!response.ok) {
-          throw new Error("Network response was not ok");
+          throw new Error("Network response was not ok")
         }
-        return response.json();
+        return response.json()
       })
       .then(data => {
-        setData(data);
-        setFilteredData(data);
+        setData(data)
+        setFilteredData(data)
       })
       .catch(error => {
-        setError(error);
-      });
-  }, []);
+        setError(error)
+      })
+  }, [])
 
   const handleFilterChange = (key, value) => {
     setFilters(prevFilters => ({
       ...prevFilters,
       [key]: value
-    }));
-  };
+    }))
+  }
 
   const handleFilterTypeChange = (key, type) => {
     setFilterTypes(prevTypes => ({
       ...prevTypes,
       [key]: type
-    }));
-  };
+    }))
+  }
 
   const applyFilters = () => {
-    let filtered = [...data];
+    let filtered = [...data]
     for (let key in filters) {
-      const filterValue = filters[key]?.toLowerCase();
-      const filterType = filterTypes[key] || 'contains';
+      const filterValue = filters[key]?.toLowerCase()
+      const filterType = filterTypes[key] || 'contains'
       filtered = filtered.filter(item => {
-        const itemValue = item[key]?.toString().toLowerCase() || '';
+        const itemValue = item[key]?.toString().toLowerCase() || ''
         switch (filterType) {
           case 'start with':
-            return itemValue.startsWith(filterValue);
+            return itemValue.startsWith(filterValue)
           case 'end with':
-            return itemValue.endsWith(filterValue);
+            return itemValue.endsWith(filterValue)
           case 'contains':
-            return itemValue.includes(filterValue);
+            return itemValue.includes(filterValue)
           case 'does not contain':
-            return !itemValue.includes(filterValue);
+            return !itemValue.includes(filterValue)
           case 'equals':
-            return itemValue === filterValue;
+            return itemValue === filterValue
           case 'does not equal':
-            return itemValue !== filterValue;
+            return itemValue !== filterValue
           default:
-            return true;
+            return true
         }
-      });
+      })
     }
-    setFilteredData(filtered);
-  };
+    setFilteredData(filtered)
+  }
 
   useEffect(() => {
-    applyFilters();
-  }, [filters, filterTypes]);
+    applyFilters()
+  }, [filters, filterTypes])
 
   const sortData = (key) => {
-    let direction = 'ascending';
+    let direction = 'ascending'
     if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
+      direction = 'descending'
     }
     const sortedArray = [...filteredData].sort((a, b) => {
       if (a[key] < b[key]) {
-        return direction === 'ascending' ? -1 : 1;
+        return direction === 'ascending' ? -1 : 1
       }
       if (a[key] > b[key]) {
-        return direction === 'ascending' ? 1 : -1;
+        return direction === 'ascending' ? 1 : -1
       }
-      return 0;
-    });
-    setFilteredData(sortedArray);
-    setSortConfig({ key, direction });
-  };
+      return 0
+    })
+    setFilteredData(sortedArray)
+    setSortConfig({ key, direction })
+  }
+
+  
+  const indexOfLastRow = currentPage * rowsPerPage
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage
+  const currentRows = filteredData.slice(indexOfFirstRow, indexOfLastRow)
+
+  const totalPages = Math.ceil(filteredData.length / rowsPerPage)
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
 
   if (error) {
-    return <div>Error: {error.message}</div>;
+    return <div>Error: {error.message}</div>
   }
 
   return (
@@ -131,7 +153,7 @@ const DataGrid = () => {
           </tr>
         </thead>
         <tbody>
-          {filteredData.map((row, index) => (
+          {currentRows.map((row, index) => (
             <tr key={index} className="border-b hover:bg-gray-50">
               {Object.values(row).map((value, i) => (
                 <td key={i} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -147,8 +169,29 @@ const DataGrid = () => {
           ))}
         </tbody>
       </table>
-    </div>
-  );
-};
 
-export default DataGrid;
+      
+      <div className="flex justify-between items-center mt-4">
+        <button 
+          onClick={goToPreviousPage} 
+          disabled={currentPage === 1} 
+          className={`px-4 py-2 text-white rounded-md ${currentPage === 1 ? 'bg-gray-300' : 'bg-blue-500'}`}
+        >
+          Previous
+        </button>
+
+        <span>Page {currentPage} of {totalPages}</span>
+
+        <button 
+          onClick={goToNextPage} 
+          disabled={currentPage === totalPages} 
+          className={`px-4 py-2 text-white rounded-md ${currentPage === totalPages ? 'bg-gray-300' : 'bg-blue-500'}`}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default DataGrid
